@@ -1,8 +1,16 @@
-# 1 安装一些R包：
-# 数据包： ALL, CLL, pasilla, airway 
-# 软件包：limma，DESeq2，clusterProfiler 
-# 工具包：reshape2
-# 绘图包：ggplot2
+---
+title: "生信技能树R语言练习题_高级"
+author: "kelly"
+date: "1 May 2019"
+output: html_document
+toc: true
+---
+# 1 安装一些R包
+数据包： ALL, CLL, pasilla, airway
+软件包：limma，DESeq2，clusterProfiler
+工具包：reshape2
+绘图包：ggplot2
+```{r setup}
 rm(list = ls())
 if(F){
   source("http://bioconductor.org/biocLite.R")
@@ -13,153 +21,154 @@ if(F){
   BiocManager::install("maftools")
   BiocManager::install("reshape2")
 }
+```
+# 2.了解ExpressionSet对象，比如CLL包里面就有data(sCLLex) 找到它包含的元素，提取其表达矩阵(使用exprs函数)，查看其大小
+A.参考：http://www.bio-info-trainee.com/bioconductor_China/software/limma.html
+B.参考：https://github.com/bioconductor-china/basic/blob/master/ExpressionSet.md
 
-# 2.了解ExpressionSet对象，比如CLL包里面就有data(sCLLex) ，找到它包含的元素，提取其表达矩阵(使用exprs函数)，查看其大小
-# A.参考：http://www.bio-info-trainee.com/bioconductor_China/software/limma.html
-# B.参考：https://github.com/bioconductor-china/basic/blob/master/ExpressionSet.md
+```{r, message=FALSE}
 library(CLL)
 data("sCLLex")
 View(sCLLex)#查看其包含的元素
 sCLLex#查看包含的元素
+```
+```{r}
 exp <- exprs(sCLLex)#提取表达矩阵
 dim(exp)#查看其大小
 group <- pData(sCLLex)#提取分组信息
 table(group)#设计矩阵
+```
+
 # 3了解 str,head,help函数
-#作用于 第二步提取到的表达矩阵
+作用于 第二步提取到的表达矩阵
+```{r}
 str(exp)
 head(exp)
 help(exp)
+```
 # 4安装并了解 hgu95av2.db 包
-#看看 ls("package:hgu95av2.db") 后 显示的那些变量
+看看 ls("package:hgu95av2.db") 后 显示的那些变量
+```{r, message=FALSE}
 library(hgu95av2.db)
 ls("package:hgu95av2.db")
 ls(hgu95av2.db)
-# [1] "hgu95av2"              "hgu95av2.db"          
-# [3] "hgu95av2_dbconn"       "hgu95av2_dbfile"      
-# [5] "hgu95av2_dbInfo"       "hgu95av2_dbschema"    
-# [7] "hgu95av2ACCNUM"        "hgu95av2ALIAS2PROBE"  
-# [9] "hgu95av2CHR"           "hgu95av2CHRLENGTHS"   
-# [11] "hgu95av2CHRLOC"        "hgu95av2CHRLOCEND"    
-# [13] "hgu95av2ENSEMBL"       "hgu95av2ENSEMBL2PROBE"
-# [15] "hgu95av2ENTREZID"      "hgu95av2ENZYME"       
-# [17] "hgu95av2ENZYME2PROBE"  "hgu95av2GENENAME"     
-# [19] "hgu95av2GO"            "hgu95av2GO2ALLPROBES" 
-# [21] "hgu95av2GO2PROBE"      "hgu95av2MAP"          
-# [23] "hgu95av2MAPCOUNTS"     "hgu95av2OMIM"         
-# [25] "hgu95av2ORGANISM"      "hgu95av2ORGPKG"       
-# [27] "hgu95av2PATH"          "hgu95av2PATH2PROBE"   
-# [29] "hgu95av2PFAM"          "hgu95av2PMID"         
-# [31] "hgu95av2PMID2PROBE"    "hgu95av2PROSITE"      
-# [33] "hgu95av2REFSEQ"        "hgu95av2SYMBOL"       
-# [35] "hgu95av2UNIGENE"       "hgu95av2UNIPROT"
-# 5理解 head(toTable(hgu95av2SYMBOL)) 的用法
-#找到 TP53 基因对应的探针ID
 head(toTable(hgu95av2SYMBOL))
 ids <- toTable(hgu95av2SYMBOL)
-#以下几种方法
-## ，1 subset函数4
+```
+## 以下几种方法获取TP53的探针名称
+### 1 subset函数
+```{r}
 a1 <- subset(ids, ids$symbol=='TP53')
-## 2 grep函数
+```
+### 2 grep函数
+```{r}
 a4 <- ids[grep("^TP53$", ids$symbol),]
-## 3 filter函数(依赖dplyr包)
-a5 <- filter(ids,symbol=='TP53')
-
-#理解探针与基因的对应关系，总共多少个基因，基因最多对应多少个探针，
-#是哪些基因，是不是因为这些基因很长，所以在其上面设计多个探针呢？
-#总共多少gene
+```
+### 3 filter函数(依赖dplyr包)
+```{r， warning = FALSE}
+a5 <- filter(ids, ids$symbol=='TP53')
+```
+理解探针与基因的对应关系，总共多少个基因，基因最多对应多少个探针，
+是哪些基因，是不是因为这些基因很长，所以在其上面设计多个探针呢？总共多少gene
+```{r}
 length(unique(ids$symbol))
-#对应探针多的是那些gene
+```
+对应探针多的是那些gene
+```{r}
 ids_fre <- data.frame(table(ids$symbol))
 tail(ids_fre[order(ids_fre$Freq),])
-# Var1 Freq
-# 8366 YME1L1    7
-# 2807  GAPDH    8
-# 3636 INPP4A    8
-# 4719    MYB    8
-# 6008 PTGER3    8
-# 7338  STAT1    8
+```
 或者用sort命令
+```{r}
 tail(sort(table(ids$symbol)))
-
-# YME1L1  GAPDH INPP4A    MYB PTGER3  STAT1 
-# 7      8      8      8      8      8
-# 不管是Agilent芯片，还是Affymetrix芯片，上面设计的探针都非常短。
-# 最长的如Agilent芯片上的探针，往往都是60bp，但是往往一个基因的长
-# 度都好几Kb。因此一般多个探针对应一个基因，取最大表达值探针来作为
-# 基因的表达量。
-
+```
+不管是Agilent芯片，还是Affymetrix芯片，上面设计的探针都非常短。
+最长的如Agilent芯片上的探针，往往都是60bp，但是往往一个基因的长
+度都好几Kb。因此一般多个探针对应一个基因，取最大表达值探针来作为
+基因的表达量。
 # 7.找到芯片有而hgu95av2.db中没有对应基因名的探针
-# 第二步提取到的表达矩阵是12625个探针在22个样本的表达量矩阵，
-# 找到那些不在 hgu95av2.db 包收录的对应着SYMBOL的探针。
-#提示：有1165个探针是没有对应基因名字的。
+第二步提取到的表达矩阵是12625个探针在22个样本的表达量矩阵，
+找到那些不在 hgu95av2.db 包收录的对应着SYMBOL的探针。
+提示：有1165个探针是没有对应基因名字的。
 ## 第一种方法：match函数
+```{r}
 dim(exp)
 dim(hgu95av2SYMBOL)
 b1 <- exp[-match(ids$probe_id, rownames(exp)),]
 dim(b1)
-# [1] 1165   22
-head(b1)
+```
 ## 第二种方法:%in%函数
+```{r, eval= FALSE}
 b2 <- exp[!(rownames(exp) %in% ids$probe_id),]
 b1==b2
+```
 # 8 过滤表达矩阵：删除注释包中没有对应基因名的探针
-#过滤表达矩阵，删除那1165个没有对应基因名字的探针。
+过滤表达矩阵，删除那1165个没有对应基因名字的探针。
+```{r}
 exp_filter_no_symbol <- as.data.frame(exp[match(ids$probe_id, rownames(exp)),])
 exp_filter_no_symbol2 <- as.data.frame(exp[rownames(exp) %in% ids$probe_id,])
-#9 整合表达矩阵，多个探针对应一个基因的情况下，只保留在所有样本里面平均表达量最大的那个探针。
-# 提示，理解 tapply,by,aggregate,split 函数 , 首先对每个基因找到最大表达量的探针。
-# 然后根据得到探针去过滤原始表达矩阵
-#这种方法能够一定程度上增加差异基因的数目，但也容易造成假阳性的结果
-#https://blog.csdn.net/tommyhechina/article/details/80468361
-#合并探针，先看有无NA值，若有，可以删除或填充
-#先检查有无，若返回值>0,说明有NA值。
-length(which(is.na(exp_symbol)))
-#结果是0，说明没有NA值。如果有则用impute包来进行填充
-#exp_symbol<- impute.knn(exp_symbol)$data
-#下面开始进行合并，用aggregate命令
+```
+# 9 整合表达矩阵，多个探针对应一个基因的情况下，只保留在所有样本里面平均表达量最大的那个探针。
+提示，理解 tapply,by,aggregate,split 函数 , 首先对每个基因找到最大表达量的探针。
+然后根据得到探针去过滤原始表达矩阵
+这种方法能够一定程度上增加差异基因的数目，但也容易造成假阳性的结果
+https://blog.csdn.net/tommyhechina/article/details/80468361
+合并探针，先看有无NA值，若有，可以删除或填充
+先检查有无，若返回值>0,说明有NA值。
+```{r}
+length(which(is.na(exp_filter_no_symbol)))
+```
+结果是0，说明没有NA值。如果有则用impute包来进行填充
+exp_symbol<- impute.knn(exp_symbol)$data
+下面开始进行合并，用aggregate命令
+```{r}
 ids <- toTable(hgu95av2SYMBOL)
 ids$median <- apply(exp_filter_no_symbol, 1, median)
 ids <- ids[order(ids$symbol, ids$median, decreasing = T),]
 ids_filtered <- ids[!duplicated(ids$symbol),]
 dim(ids_filtered)
+```
 # 10 过滤后的表达矩阵行名改为SYMBOL
-#把过滤后的表达矩阵更改行名为基因的symbol，因为这个时候探针和基因是一对一关系了。 
+把过滤后的表达矩阵更改行名为基因的symbol，因为这个时候探针和基因是一对一关系了。 
+```{r}
 exp_filter_no_symbol$probe_id <- rownames(exp_filter_no_symbol)
 exp_ids <- merge(ids_filtered, exp_filter_no_symbol, by ='probe_id' )
 rownames(exp_ids) <- exp_ids$symbol
 exp_sym <- exp_ids[,-c(1:3)]
+```
 # 11 画第一个样本和所有样本的基于表达量的图
-# 对第10步得到的表达矩阵进行探索，先画第一个样本的所有基因的表达量的boxplot,hist,density ， 然后画所有样本的 这些图
-# 参考：http://bio-info-trainee.com/tmp/basic_visualization_for_expression_matrix.html
-# 理解ggplot2的绘图语法，数据和图形元素的映射关系
+对第10步得到的表达矩阵进行探索，先画第一个样本的所有基因的表达量的boxplot,hist,density ， 然后画所有样本的 这些图
+参考：http://bio-info-trainee.com/tmp/basic_visualization_for_expression_matrix.html
+理解ggplot2的绘图语法，数据和图形元素的映射关系
+```{r}
 boxplot(exp_sym$CLL11.CEL)
 boxplot(exp_sym)
-#用ggplot2来画
-#ggplot2画图要改变数据形式
+```
+用ggplot2来画
+ggplot2画图要改变数据形式
+```{r}
 library(reshape2)
 exp_g <- melt(exp_ids[,-c(1,3)], id.vars = 'symbol')
 exp_g$group <- rep(group$Disease, each = nrow(exp_sym))
 colnames(exp_g)[2] <- 'sample'
 head(exp_g)
-# symbol  variable    value    group
-# 1   MAPK3 CLL11.CEL 5.743132 progres.
-# 2    TIE1 CLL11.CEL 2.285143 progres.
-# 3 CYP2C19 CLL11.CEL 3.309294 progres.
-# 4   CXCR5 CLL11.CEL 7.544884 progres.
-# 5   DUSP1 CLL11.CEL 5.083793 progres.
-# 6   MMP10 CLL11.CEL 3.252213 progres.
-#第一个样本的
+```
+第一个样本的
+```{r}
+library(ggplot2)
 sample_1 <- subset(exp_g, exp_g$sample=='CLL2.CEL')
 head(sample_1)
 p_s1 <- ggplot(sample_1, aes(x = sample, y = value, fill = 'lightblue'))
 p_s1 + geom_boxplot()
 p_s1 + geom_violin()+geom_boxplot(fill = 'white')
+
 ggplot(sample_1, aes(x = value, fill = 'lightblue'))+
   geom_histogram(bins = 500)
 ggplot(sample_1, aes(x = value, fill = 'lightblue'))+
   geom_density()
-  #下面是所有样本的
+```
+下面是所有样本的
+```{r}
 p <- ggplot(exp_g, aes(x = sample, y = value, fill = group))
 p + geom_boxplot()
 p + geom_violin()
@@ -167,9 +176,11 @@ ggplot(exp_g, aes(x=value,fill = group))+ geom_histogram(bins = 500)+
        facet_wrap(~group, nrow = 5)
 ggplot(exp_g, aes(x=value,fill = group))+ geom_density()+
   facet_wrap(~group, nrow = 5)
+```
 # 12 理解统计学指标mean,median,max,min,sd,var,mad
-#并计算出每个基因在所有样本的这些统计学指标，最后按照mad值排序，
-#取top 50 mad值的基因，得到列表
+并计算出每个基因在所有样本的这些统计学指标，最后按照mad值排序，取top 50 mad值的基因，得到列表
+
+```{r}
 head(exp_sym)
 exp_mean <- apply(exp_sym, 1, mean)
 exp_median <- apply(exp_sym,1, median)
@@ -180,59 +191,69 @@ exp_var <- apply(exp_sym, 1, var)
 exp_md <- apply(exp_sym, 1, mad)
 exp_sta <- data.frame(exp_mean, exp_median, exp_max, exp_min, exp_sd, exp_var, exp_md)
 md_order <- exp_sta[order(exp_sta$exp_md, decreasing = T),]
-md_order[1:50,]
-# exp_mean exp_median   exp_max  exp_min    exp_sd   exp_var   exp_md
-# FAM30A    5.708006   6.649724  9.901761 2.422295 2.7988082 7.8333276 3.982191
-# IGF2BP3   4.801569   4.659068  8.899667 2.335350 2.2955054 5.2693450 3.234011
-# DMD       6.791259   7.036325 10.653183 3.060286 2.5247064 6.3741424 3.071541
-# TCF7      7.665692   7.697969 10.976634 4.547559 2.1667457 4.6947870 2.993352
-# SLAMF1    5.385746   5.392873  8.385662 3.016306 1.9537439 3.8171152 2.944105
-# FOS       7.204708   7.009703 10.831309 3.581185 2.1980961 4.8316266 2.938078
-# LGALS1    6.612549   6.738502  9.275395 2.548286 2.0956955 4.3919397 2.600604
-# IGLC1    10.912833  10.695933 14.895714 6.516660 2.6146697 6.8364978 2.590895
-# ZAP70     5.395807   5.223290  7.581484 3.230575 1.5860361 2.5155105 2.579046
+md_order[1:50,1:5]
+```
+
 # 13 提取基因的表达矩阵子集，绘制热图
-#根据第12步骤得到top 50 mad值的基因列表来取表达矩阵的子集，并且热图可视化子表达矩阵。试试看其它5种热图的包的不同效果。
+根据第12步骤得到top 50 mad值的基因列表来取表达矩阵的子集，并且热图可视化子表达矩阵。试试看其它5种热图的包的不同效果。
+```{r}
 names_50 <- rownames(md_order[1:50,])
 exp_mad_top50 <- exp_sym[match(names_50, rownames(exp_sym)),]
 pheatmap::pheatmap(log2(exp_mad_top50))
 pheatmap::pheatmap(exp_mad_top50, scale=c("row"))
+```
 # 14 取N个指标的交集并可视化：UpSetR包
-#取不同统计学指标mean,median,max,mean,sd,var,mad的各top50基因列表，
-#使用UpSetR包来看他们之间的overlap情况
+取不同统计学指标mean,median,max,mean,sd,var,mad的各top50基因列表，
+使用UpSetR包来看他们之间的overlap情况
+```{r}
 mean_50 <- head(sort(exp_mean, decreasing = T),50)
 median_50 <- head(sort(exp_median, decreasing = T),50)
-#写函数完成上述重复问题问题
+```
+写函数完成上述重复问题问题
+```{r}
 sta_50 <- function(x){
   x <- head(sort((apply(exp_sym, 1, x)), decreasing = T),50)
   x_50 <- x
   return(names((x_50)))
 }
 library('UpSetR')
+```
 
-#取不含重复的并集
+取不含重复的并集
+```{r}
 sta_50_all <- unique(c(sta_50(mean), sta_50(median),sta_50(max),sta_50(min),sta_50(sd),sta_50(var), sta_50(mad)))
-#转成upset需要的格式，也就是1和0分别代表
+```
+转成upset需要的格式，也就是1和0分别代表
+```{r}
 u_mean <- ifelse(sta_50_all %in% sta_50(mean), 1, 0)
-#再写个函数
+```
+再写个函数
+```{r}
 upset_sta <- function(x){
    x <- ifelse(sta_50_all %in% sta_50(x), 1, 0)
    u_x <- x
    return(u_x)
 }
+```
+```{r}
 upset_all <- data.frame(sta_50_all, upset_sta(mean),upset_sta(median),
                         upset_sta(max),upset_sta(min),upset_sta(sd),upset_sta(var),upset_sta(mad))
 ?upset
 upset(upset_all, nsets = 7, matrix.color = 'black',main.bar.color = 'green',
       sets.bar.color = 'red',point.size = 2, line.size = 0.8,
-      shade.color = 'red', matrix.dot.alpha = 0.5)                
+      shade.color = 'red', matrix.dot.alpha = 0.5) 
+```
+
 # 15 提取表型数据
-#在第二步的基础上面提取CLL包里面的data(sCLLex) 数据对象的样本的表型数据。
+在第二步的基础上面提取CLL包里面的data(sCLLex) 数据对象的样本的表型数据。
+```{r}
 data("sCLLex")
 pData(sCLLex)
+```
 # 16 对表达矩阵进行聚类画图，添加临床表型数据
-#对所有样本的表达矩阵进行聚类并且绘图，然后添加样本的临床表型数据信息(更改样本名)
+对所有样本的表达矩阵进行聚类并且绘图，然后添加样本的临床表型数据信息(更改样本名)
 #前面
+```{r}
 head(exp_sym)
 group_list <- as.character(pData(sCLLex)[,2])
 colnames(exp_sym) <- paste(group_list, 1:22, sep = '')
@@ -241,13 +262,144 @@ t.exp <- t(exp_sym)
 t.exp[1:5,1:5]
 hc <- hclust(dist(t.exp))
 plot(as.dendrogram(hc))
-##用factoextra包画
+```
+用factoextra包画
+```{r}
 exp_cluster <- t(exp_sym)
 exp_clust_dist <- dist(exp_cluster, method = 'euclidean')
 hc <- hclust(exp_clust_dist,'ward.D')
+
+```
+```{r}
 library(factoextra)
-#install.packages('factoextra')
 fviz_dend(hc, k=4, cex = 0.5,
           k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
           color_labels_by_k = TRUE, rect = TRUE)
-# 
+```
+# 17 对所有样本的表达矩阵进行PCA分析并且绘图，同样要添加表型信息
+```{r}
+library(devtools)
+install_github('sinhrks/ggfortify')
+library(ggfortify)
+df <- as.data.frame(t(exp_sym))
+df$group <- group$Disease
+autoplot(prcomp(df[,1:(ncol(df)-1)]), data=df, 
+         label = TRUE, colour = 'group')
+```
+#18.根据表达矩阵及样本分组信息进行批量T检验，得到检验结果表格
+```{r}
+dat <- exp_sym
+group_list <- as.factor(group_list)
+group1 <- which(group_list == levels(group_list)[1])
+group2 <- which(group_list == levels(group_list)[2])
+dat1 <- dat[,group1]
+dat2 <- dat[,group2]
+dat <- cbind(dat1, dat2)
+pvals <- apply(dat, 1, function(x){
+  t.test(as.numeric(x)~group_list)$p.value
+})
+head(pvals)
+p.adj <- p.adjust(pvals, method = 'BH')
+avg_1 <- log2(rowMeans(dat1))
+avg_2 <- log2(rowMeans(dat2))
+log2FC <- avg_2-avg_1
+deg_t.test <- cbind(avg_1, avg_2, log2FC, pvals, p.adj)
+deg_t.test <- deg_t.test[order(deg_t.test[,4]),]
+head(deg_t.test)
+class(deg_t.test)
+```
+#19.使用limma包对表达矩阵及样本分组信息进行差异分析，得到差异分析表格，
+重点看logFC和P值，画个火山图(就是logFC和-log10(P值)的散点图)。
+## 1 构建设计矩阵design matrix
+```{r}
+design <- model.matrix(~0+factor(group_list))
+colnames(design) <- levels(factor(group_list))
+rownames(design) <- colnames(exp_sym)
+design
+fit <- lmFit(exp_sym, design)
+```
+## 2 构建比较矩阵
+```{r}
+contrast.matrix <- makeContrasts(paste0(unique(group_list), 
+                           collapse = '-'), levels = design)
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fit3 <- eBayes(fit2)
+```
+## 3 差异表达矩阵获取
+```{r}
+mtx <- topTable(fit3, coef = 1, n=Inf)
+DEG_mtx <- na.omit(mtx)
+dim(mtx)
+dim(DEG_mtx)
+head(DEG_mtx)
+#write.csv(DEG_mtx,"DEG_mtx.csv",quote = F)
+```
+## 4 火山图
+### 第一步，设定阈值，界定上调下调和不表达的基因
+```{r}
+DEG <- DEG_mtx
+logFC_cutoff <- with(DEG, mean(abs(logFC))+2*sd(abs(logFC)))
+DEG$change = as.factor(ifelse(DEG$P.Value < 0.05 & abs(DEG$logFC) > logFC_cutoff,
+                              ifelse(DEG$logFC > logFC_cutoff ,'UP','DOWN'),'NOT')
+)
+```
+>这是两个ifelse判断嵌套。先了解ifelse的结构，ifelse（条件，yes，no），如果满足条件，那么返回yes/或者执行yes所处的下一个命令；反之返回no
+这里外层的ifelse中DEG$P.Value < 0.05 & abs(DEG$logFC) > logFC_cutoff是判断条件，这个就是看p值和logFC是不是达到了他们设定的阈值【p是0.05，logFC是logFC_cutoff】，如果达到了就进行下一个ifelse，达不到就返回NOT；
+第二层ifelse也是上来一个条件：DEG$logFC > logFC_cutoff，如果达到了，就返回UP即上调基因，达不到就是下调DOWN
+最后将判断结果转位因子型，得到DOWN、UP、NOT的三种因子
+
+### 第二步，设定火山图标题
+```{r}
+this_tile <- paste0('Cutoff for logFC is ',round(logFC_cutoff,3),
+                    '\nThe number of up gene is ',nrow(DEG[DEG$change =='UP',]) ,
+                    '\nThe number of down gene is ',nrow(DEG[DEG$change =='DOWN',])
+)
+```
+### 第三步，画图
+```{r}
+g = ggplot(data=DEG, aes(x=logFC, y=-log10(P.Value), color=change)) +
+  geom_point(alpha=0.4, size=1.75) +
+  theme_set(theme_set(theme_bw(base_size=20)))+
+  xlab("log2 fold change") + ylab("-log10 p-value") +
+  ggtitle( this_tile ) + theme(plot.title = element_text(size=15,hjust = 0.5))+
+  scale_colour_manual(values = c('blue','black','red')) ## corresponding to the levels(res$change)
+print(g)
+```
+### 第四步，画个漂亮的火山图
+```{r}
+P_volcano=ggplot(DEG,aes(x=logFC,y=-log10(P.Value)))+
+  geom_point(aes(color=change))+
+  #设置点的颜色
+  scale_color_manual(values =c("UP" = "red", "DOWN" = "blue", "NOT" = "grey"))+
+  labs(x="log2FC",y="-log10FDR")+
+  #增加阈值线:分别对应FDR=0.05,|log2FC|=1
+  geom_hline(yintercept=-log10(0.05),linetype=4)+
+  geom_vline(xintercept=c(-1,1),linetype=4)+
+  xlim(-3,3)+
+  theme(plot.title = element_text(size = 25,face = "bold", vjust = 0.5, hjust = 0.5),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18, face = "bold"),
+        legend.position = 'right',
+        legend.key.size=unit(0.8,'cm'),
+        axis.ticks.x=element_blank(),
+        axis.text.x=element_text(size = 15,face = "bold", vjust = 0.5, hjust = 0.5),
+        axis.text.y=element_text(size = 15,face = "bold", vjust = 0.5, hjust = 0.5),
+        axis.title.x = element_text(size = 20,face = "bold", vjust = 0.5, hjust = 0.5),
+        axis.title.y = element_text(size = 20,face = "bold", vjust = 0.5, hjust = 0.5),
+        panel.background = element_rect(fill = "transparent",colour = "black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        plot.background = element_rect(fill = "transparent",colour = "black"))
+P_volcano
+```
+#20.对T检验结果的P值和limma包差异分析的P值画散点图，看看哪些基因相差很大
+```{r}
+deg_t.test <- as.data.frame(deg_t.test)
+t_limma_pval <- cbind(deg_t.test,DEG)[,c(4,9)]
+head(t_limma_pval)
+plot(t_limma_pval)
+pheatmap::pheatmap(cor(t_limma_pval))
+```
+#看哪些基因在两种方法种的p值差异比较大
+
+
